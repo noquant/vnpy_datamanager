@@ -9,7 +9,7 @@ from vnpy.trader.object import BarData
 from vnpy.trader.database import DB_TZ
 from vnpy.trader.utility import available_timezones
 
-from ..engine import APP_NAME, ManagerEngine, BarOverview
+from ..engine import APP_NAME, ManagerEngine, BarOverview, get_security_type
 
 
 class ManagerWidget(QtWidgets.QWidget):
@@ -95,6 +95,10 @@ class ManagerWidget(QtWidgets.QWidget):
         self.daily_child.setText(0, "日线")
         self.tree.addTopLevelItem(self.daily_child)
 
+        self.weekly_child: QtWidgets.QTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.tree)
+        self.weekly_child.setText(0, "周线")
+        self.tree.addTopLevelItem(self.weekly_child)
+
     def init_table(self) -> None:
         """"""
         labels: list = [
@@ -125,8 +129,10 @@ class ManagerWidget(QtWidgets.QWidget):
                 self.minute_child.removeChild(item)
             elif interval == Interval.HOUR:
                 self.hour_child.removeChild(item)
-            else:
+            elif interval == Interval.DAILY:
                 self.daily_child.removeChild(item)
+            else:
+                self.weekly_child.removeChild(item)
 
         self.tree_items.clear()
 
@@ -140,6 +146,9 @@ class ManagerWidget(QtWidgets.QWidget):
         overviews.sort(key=lambda x: x.symbol)
 
         for overview in overviews:
+            s_type = get_security_type(overview.symbol)
+            if self.engine.s_type not in ('all', s_type):
+                continue
             key: tuple = (overview.symbol, overview.exchange, overview.interval)
             item: Optional[QtWidgets.QTreeWidgetItem] = self.tree_items.get(key, None)
 
@@ -155,8 +164,10 @@ class ManagerWidget(QtWidgets.QWidget):
                     self.minute_child.addChild(item)
                 elif overview.interval == Interval.HOUR:
                     self.hour_child.addChild(item)
-                else:
+                elif overview.interval == Interval.DAILY:
                     self.daily_child.addChild(item)
+                else:
+                    self.weekly_child.addChild(item)
 
                 output_button: QtWidgets.QPushButton = QtWidgets.QPushButton("导出")
                 output_func = partial(
@@ -200,6 +211,7 @@ class ManagerWidget(QtWidgets.QWidget):
         self.minute_child.setExpanded(True)
         self.hour_child.setExpanded(True)
         self.daily_child.setExpanded(True)
+        self.weekly_child.setExpanded(True)
 
     def import_data(self) -> None:
         """"""
